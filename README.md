@@ -1,6 +1,9 @@
-# crawler
+# crawler #0626 20:04
 # 爬蟲檔案：
-* 104：https://colab.research.google.com/drive/1lbxm-YNF2RqOfkTxADl9Olx64rnICKHN?usp=sharing
-* 518：https://colab.research.google.com/drive/1ruX8B1j1IM3-wzwZnpJHpWJ0xkMgsQCz?usp=sharing
-* Yes123: https://colab.research.google.com/drive/1r1UO_k715_uz42RINt9kHIPz6w4PyuUn?usp=sharing
-* 格式檢查：https://colab.research.google.com/drive/1HDZQAHI_tOrmXnH_O_kNfhUbXoCPENhc?usp=sharing
+* 104：crawler_104.py
+* 518：crawler_518.py
+* Yes123: crawler_yes123.py
+
+-- 爬蟲和格式檢查在同一檔案內完成
+-- 最終輸出一個excel檔，檔名為<"執行當日日期"_"人力銀行名稱"_檢查完成.xlsx>，例如：2021-06-26_104人力銀行_檢查完成
+-- 104 和 yes123在*職務名稱*檢查時偶而會有誤判的情形，懷疑是編碼問題但目前沒有有效的解決辦法QQ
