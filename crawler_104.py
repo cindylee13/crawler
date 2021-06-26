@@ -90,7 +90,6 @@ def find_title_104(key_txt):
         os.mkdir('jobs_csv') # 建立jobs_csv資料夾
         print('建立jobs_csv資料夾完成')
     csv_column_104(path_csv) #建立行標題
-    csv_save = ""
     key = quote(key_txt)
     #  104 api searchTempExclude=2  -> 設定排除派遣
     find_page_url = 'https://www.104.com.tw/jobs/search/?ro=0&kwop=7&keyword={0}&order=15&asc=0&page=1&mode=s&jobsource=2018indexpoc&searchTempExclude=2'.format(key)
@@ -124,7 +123,7 @@ def find_title_104(key_txt):
                     employee_writer.writerow([date,company_name, title_str, title_url])
             else:
                 continue
-    return print('第一階段資料爬取完成')
+    return print('求職網頁資料爬取完成')
 
 
 sel = '104'
@@ -140,30 +139,114 @@ mask1 = data_104.公司名稱.str.contains('富邦人壽')
 data_masked = data_104.loc[(mask1)]
 web_number = data_masked['文章編號']
 
+# 檢查函式
+#確認*公司名稱*是否有不符規定
+def check_CompanyName(check_data):
+    regex = re.compile(r'110A01') #正規
+    if (regex == None):
+        reason = '公司名稱'
+    else:
+        reason = ''
+    return reason
+
+#確認*職務名稱*是否有不符規定
+def check_jobName(check_data):
+    key_word = ['行銷專員CA', '行銷專員', '⾏銷專員CA(正職)', '行銷專員CA(正職)', '行銷專員', '行銷專員CA(正職)']
+    if ((key_word[0]  not in check_data) and (key_word[1]  not in check_data)and (key_word[2]  not in check_data)):
+        reason = '職務名稱'
+    else:
+        reason = ''
+    return reason
+
+#確認*薪資待遇*是否有不符規定
+def check_salary(check_data):
+    regex = re.compile(r'160') #正規
+    match = regex.search(str(check_data))
+    if match == None:
+        reason = '薪資待遇'
+    else:
+        reason = ''
+    return reason
+
+# #確認*工作性質*是否有不符規定
+# def check_jobType(check_data, check_jobType_reason_list):
+#   check_jobType_reason_list = []
+#   regex1 = re.compile(r'全職') #正規
+#   regex2 = re.compile(r'正職') #正規
+#   # print(match)
+#   check_jobType_list = []
+#   for i in check_data['工作性質']:
+#     match = (regex1.search(str(i)) or regex2.search(str(i)))
+#     if match == None:
+#       check_jobType_list.append('False')
+#       check_jobType_reason_list.append('工作性質')
+#     else:
+#       check_jobType_list.append('')
+#       check_jobType_reason_list.append('')
+#   return check_jobType_reason_list
+
+# #確認*上班地點*是否有不符規定
+# def check_jobPlace(check_data, check_jobPlace_reason_list):
+#   check_jobPlace_reason_list = []
+#   key_word = ['通訊處', '分處', '展業處']
+#   # print(match)
+#   check_jobPlace_list = []
+#   for i in check_data['上班地點']:
+#     if (key_word[0]  not in str(i)) and (key_word[1]  not in str(i)):
+#       check_jobPlace_list.append('False')
+#       check_jobPlace_reason_list.append('上班地點')
+#     else:
+#       check_jobPlace_list.append('')
+#       check_jobPlace_reason_list.append('')
+#   return check_jobPlace_reason_list
+
+#確認*學歷要求*是否有不符規定
+def check_jobEducation(check_data):
+    key_word = ['高中職', '高中', '高中(職)', '高中(職)以上']
+    if ((key_word[0]  not in check_data) and (key_word[1]  not in check_data) and (key_word[2]  not in check_data) and (key_word[3]  not in check_data)):
+        reason = '學歷要求'
+    else:
+        reason = ''
+    return reason
+
+#確認*聯絡人*是否有不符規定
+def check_contact(check_data):
+    if check_data is None:
+        reason = '聯絡人'
+    else:
+        reason = ''
+    return reason
+
 def csv_column_left(path_csv): #建立行標題
     with open(path_csv + '.csv', mode='a+', newline='', encoding='utf-8') as employee_file: 
         employee_writer = csv.writer(employee_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        employee_writer.writerow(['工作名稱', '公司名稱', '公司地址', '薪資', '工作內容', '學歷要求', '工作網址','工作性質','聯絡人'])
+        employee_writer.writerow(['工作名稱', '公司名稱', '公司地址', '薪資', '工作內容', '學歷要求', '工作網址','工作性質','聯絡人','違規原因'])
 path_csv1 = "%s" % os.getcwd() + '/' + 'jobs_csv/'+ str(get_todate()) + '_left_104人力銀行'
 csv_column_left(path_csv1) #建立行標題
 
+print('爬取單項資料及檢查資料')
 for num in web_number:
   url = 'https://www.104.com.tw/job/ajax/content/' + num
   headers = {"Referer":"https://www.104.com.tw/job/" + num,}
   response = requests.get(url = url, headers = headers)
   storage = response.json()
   web_url = "https://www.104.com.tw/job/" + num
-  title = storage['data']['header']['jobName']
-  company_name =  storage['data']['header']['custName']
-  company_address = storage['data']['jobDetail']['addressRegion'] + storage['data']['jobDetail']['addressDetail']
-  salary = storage['data']['jobDetail']['salary' ]
-  introduction = storage['data']['jobDetail']['jobDescription'] 
-  education = storage['data']['condition']['edu']
-  job_type = storage['data']['jobDetail']['jobType']
-  contact_name = storage['data']['contact']['hrName']
+  title = storage['data']['header']['jobName'] #工作名稱
+  reason = check_jobName(title) #檢查工作名稱
+  company_name =  storage['data']['header']['custName'] #公司名稱
+  reason = reason + check_CompanyName(company_name) #檢查公司名稱
+  company_address = storage['data']['jobDetail']['addressRegion'] + storage['data']['jobDetail']['addressDetail'] #上班地點
+  salary = storage['data']['jobDetail']['salary' ] #薪資
+  reason = reason + check_salary(salary)#檢查薪資
+  introduction = storage['data']['jobDetail']['jobDescription'] #工作內容
+  education = storage['data']['condition']['edu'] #學歷要求
+  reason = reason + check_jobEducation(education)#檢查學歷要求
+  job_type = storage['data']['jobDetail']['jobType'] #工作類型
+  contact_name = storage['data']['contact']['hrName']#聯絡人
+  reason = reason + check_contact(contact_name)#檢查聯絡人
   with open(path_csv1 + '.csv', mode='a+', newline='', encoding='utf-8') as employee_file: #w
                     employee_writer = csv.writer(employee_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                    employee_writer.writerow([title, company_name, company_address, salary, introduction, education, web_url, job_type, contact_name])
+                    employee_writer.writerow([title, company_name, company_address, salary, introduction, education, web_url, job_type, contact_name, reason])
 
 file = 'jobs_csv/' +  str(get_todate()) + '_left_104人力銀行.csv'
 data_left = pd.read_csv(file)
@@ -171,11 +254,11 @@ data_left = pd.read_csv(file)
 mask2 = data_left.薪資.str.contains('160')
 data_left_masked = data_left.loc[(mask2)]
 # 儲存成 csv格式檔
-file_name =  str(get_todate()) + '_104人力銀行' #檔案名稱
+file_name =  str(get_todate()) + '_104人力銀行_檢查完成' #檔案名稱
 data_left_masked.to_excel('jobs_csv/{}.xlsx'.format(file_name), index=False)
 os.remove("%s" % os.getcwd() + '/' + 'jobs_csv/'+ str(get_todate()) +  '_104人力銀行.csv')
 os.remove("%s" % os.getcwd() + '/' + 'jobs_csv/'+ str(get_todate()) +  '_left_104人力銀行.csv')
-print('爬蟲完成！')
+print("完成！請開啟檔案")
 
 
 

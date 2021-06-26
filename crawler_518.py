@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -66,7 +64,85 @@ def read_url(url):
 def csv_column_518(path_csv): #建立行標題
     with open(path_csv + '.csv', mode='a+', newline='', encoding='utf-8') as employee_file: 
         employee_writer = csv.writer(employee_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        employee_writer.writerow(['網址','公司名稱', '工作名稱', '工作內容', '薪資', '上班地點', '工作性質', '學歷要求', '聯絡人'])
+        employee_writer.writerow(['網址','公司名稱', '工作名稱', '工作內容', '薪資', '上班地點', '工作性質', '學歷要求', '聯絡人', '違規原因'])
+
+# 檢查函式
+#確認*公司名稱*是否有不符規定
+def check_CompanyName(check_data):
+    regex = re.compile(r'110A01') #正規
+    if (regex == None):
+        reason = '公司名稱'
+    else:
+        reason = ''
+    return reason
+
+#確認*職務名稱*是否有不符規定
+def check_jobName(check_data):
+    key_word = ['行銷專員CA', '行銷專員', '⾏銷專員CA(正職)', '行銷專員CA(正職)', '行銷專員', '行銷專員CA(正職)']
+    if ((key_word[0]  not in check_data) and (key_word[1]  not in check_data)and (key_word[2]  not in check_data)):
+        reason = '職務名稱'
+    else:
+        reason = ''
+    return reason
+
+#確認*薪資待遇*是否有不符規定
+def check_salary(check_data):
+    regex = re.compile(r'160') #正規
+    match = regex.search(str(check_data))
+    if match == None:
+        reason = '薪資待遇'
+    else:
+        reason = ''
+    return reason
+
+# #確認*工作性質*是否有不符規定
+# def check_jobType(check_data, check_jobType_reason_list):
+#   check_jobType_reason_list = []
+#   regex1 = re.compile(r'全職') #正規
+#   regex2 = re.compile(r'正職') #正規
+#   # print(match)
+#   check_jobType_list = []
+#   for i in check_data['工作性質']:
+#     match = (regex1.search(str(i)) or regex2.search(str(i)))
+#     if match == None:
+#       check_jobType_list.append('False')
+#       check_jobType_reason_list.append('工作性質')
+#     else:
+#       check_jobType_list.append('')
+#       check_jobType_reason_list.append('')
+#   return check_jobType_reason_list
+
+# #確認*上班地點*是否有不符規定
+# def check_jobPlace(check_data, check_jobPlace_reason_list):
+#   check_jobPlace_reason_list = []
+#   key_word = ['通訊處', '分處', '展業處']
+#   # print(match)
+#   check_jobPlace_list = []
+#   for i in check_data['上班地點']:
+#     if (key_word[0]  not in str(i)) and (key_word[1]  not in str(i)):
+#       check_jobPlace_list.append('False')
+#       check_jobPlace_reason_list.append('上班地點')
+#     else:
+#       check_jobPlace_list.append('')
+#       check_jobPlace_reason_list.append('')
+#   return check_jobPlace_reason_list
+
+#確認*學歷要求*是否有不符規定
+def check_jobEducation(check_data):
+    key_word = ['高中職', '高中', '高中(職)', '高中(職)以上']
+    if ((key_word[0]  not in check_data) and (key_word[1]  not in check_data) and (key_word[2]  not in check_data) and (key_word[3]  not in check_data)):
+        reason = '學歷要求'
+    else:
+        reason = ''
+    return reason
+
+#確認*聯絡人*是否有不符規定
+def check_contact(check_data):
+    if check_data is None:
+        reason = '聯絡人'
+    else:
+        reason = ''
+    return reason
 
 web_list_518 = []
 url_list = ['https://www.518.com.tw/job-index-P-1.html?ai=0&ad=%E5%AF%8C%E9%82%A6%E4%BA%BA%E5%A3%BD&ai=0&ai=0', 'https://www.518.com.tw/job-index-P-2.html?ai=0&ad=%E5%AF%8C%E9%82%A6%E4%BA%BA%E5%A3%BD&ai=0']
@@ -83,22 +159,18 @@ if not os.path.isdir('jobs_csv'): # 確認是否有jobs_csv資料夾  沒有則�
     print('建立jobs_csv資料夾完成')
 csv_column_518(path_csv) #建立行標題
 
-# company_name
-# job_title
-# job_description
-# job_salary
-# job_place
-# job_type
-# edu_title
-# contact
-for i in web_list_518:
+for n, i in enumerate(web_list_518):
+    print('正在爬取檢查第' + str(n+1) + '筆資料')
     soup = read_url(i) 
     web = i
     company_name = soup.find_all('span')[2].get_text()#公司名稱
+    reason = check_CompanyName(company_name) #檢查公司名稱
     job_title = soup.select('.job-title')[0].get_text() #工作名稱
+    reason = reason + check_jobName(job_title) #檢查工作名稱
     job_description = soup.select('.JobDescription')[0].find('p').get_text() #工作內容
     job_salary = soup.select('.jobItem')[0].find_all('li')[0].find('span').get_text() #薪資
     job_salary = job_salary.replace('時薪 160 元', '160')
+    reason = reason + check_salary(job_salary)#檢查薪資
     job_place = soup.select('.jobItem')[0].find_all('li')[1].find('span').get_text() #上班地點
     job_type = soup.select('.condition')[0].find('ul').find_all('li')[0].find('span').get_text() #工作類型
     edu_title = soup.find_all('li')[16].get_text() #學歷要求
@@ -106,14 +178,19 @@ for i in web_list_518:
         edu_title = soup.find_all('li')[17].find('span').get_text()
     else:
         edu_title = soup.find_all('li')[16].find('span').get_text()
+    reason = reason + check_jobEducation(edu_title)#檢查學歷要求
+        
     contact = soup.select('.contact_info')[0].find_all('li')[0].find('span').get_text() #聯絡人
+    reason = reason + check_contact(contact)#檢查聯絡人
+
     with open(path_csv + '.csv', mode='a+', newline='', encoding='utf-8') as employee_file: #w
                     employee_writer = csv.writer(employee_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                    employee_writer.writerow([web, company_name, job_title, job_description, job_salary, job_place, job_type, edu_title, contact])
+                    employee_writer.writerow([web, company_name, job_title, job_description, job_salary, job_place, job_type, edu_title, contact, reason])
 
+print("檢查完成，寫檔中...")
 file= 'jobs_csv/' + str(get_todate()) + '_518人力銀行.csv'
 data_518 = pd.read_csv(file)
-file_name =  str(get_todate()) + '_518人力銀行' #檔案名稱
-data_518.to_excel('jobs_csv/{}.xlsx'.format(file_name), index=False)
-os.remove("%s" % os.getcwd() + '/' + 'jobs_csv/'+ str(get_todate()) +  '_518人力銀行.csv')
-print("爬蟲完成！")
+file_name =  str(get_todate()) + '_518人力銀行_檢查完成' #檔案名稱
+data_518.to_excel('jobs_csv/{}.xlsx'.format(file_name), index=False) #建立excel檔
+os.remove("%s" % os.getcwd() + '/' + 'jobs_csv/'+ str(get_todate()) +  '_518人力銀行.csv') #csv檔刪除
+print("完成！請開啟檔案")
